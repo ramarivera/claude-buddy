@@ -14,19 +14,25 @@ Handle the user's `/buddy` command using the claude-buddy MCP tools.
 **Before routing any command, check whether `mcp__claude_buddy__*` tools are registered in this session.** If they are NOT — Claude Code was unable to start the claude-buddy MCP server — do not attempt to call any buddy tool. The tool calls will fail with an unhelpful "tool not found" error. Instead, run this diagnostic and report the result to the user so they can fix the underlying cause:
 
 1. Check bun availability:
+
    ```bash
    command -v bun && bun --version
    ```
+
    The MCP launcher (`server/mcp-launcher.sh`) requires `bun` on PATH. If this command prints nothing, bun is missing — tell the user to install it (`curl -fsSL https://bun.sh/install | bash`), open a new terminal so PATH picks it up, and restart Claude Code. That is almost always the fix.
 
 2. If bun IS present, run the launcher directly to capture whatever error it emits. The launcher path depends on which marketplace installed the plugin; locate it first:
+
    ```bash
    find ~/.claude/plugins/cache -name mcp-launcher.sh -path '*claude-buddy*' 2>/dev/null
    ```
+
    Then execute the first result with stdin closed so it exits cleanly:
+
    ```bash
    <launcher-path> < /dev/null; echo "exit=$?"
    ```
+
    Report the stdout/stderr and exit code verbatim. Common causes: missing `bun`, corrupted plugin cache (suggest `claude plugin uninstall claude-buddy@claude-buddy && claude plugin install claude-buddy@claude-buddy`), or a `bun`-level error loading `server/index.ts`.
 
 3. If `$CLAUDE_CONFIG_DIR` is set in the environment, use that directory instead of `~/.claude` when searching for the launcher.
@@ -74,7 +80,11 @@ Based on `$ARGUMENTS`:
 
 ## CRITICAL OUTPUT RULES
 
-The MCP tools return pre-formatted ASCII art with ANSI colors, box-drawing characters, stat bars, and species art. This is the companion's visual identity.
+Different buddy tools return different shapes of output. The rules below ensure the companion's visual identity survives intact while plain-text replies stay visible to the user.
+
+### Visual-card outputs — strict verbatim
+
+These tools return pre-formatted ASCII art with ANSI colors, box-drawing characters, stat bars, and species art: `buddy_show`, `buddy_stats`, `buddy_pet`, `buddy_achievements`, `buddy_react`.
 
 **You MUST output the tool result text EXACTLY as returned — character for character, line for line.** Do NOT:
 
@@ -86,7 +96,21 @@ The MCP tools return pre-formatted ASCII art with ANSI colors, box-drawing chara
 
 **Just output the raw text content from the tool result. Nothing else.** The ASCII art IS the response.
 
-If the user mentions the buddy's name in normal conversation, call `buddy_react` with reason "turn" and display the result verbatim.
+### Plain-text outputs — verbatim + visible
+
+These tools return plain text, not ASCII art: `buddy_help`, `buddy_unmute`, `buddy_mute`, `buddy_frequency`, `buddy_style`, `buddy_statusline`, `buddy_list`, `buddy_rename`, `buddy_save`, `buddy_dismiss`, `buddy_set_personality`.
+
+**The visible reply MUST include the tool result text verbatim — every time, on every call, even on repeated calls in the same session.** Treat each invocation as a fresh request from the user, not a "they've seen it before" signal. Tool result blocks live in your context, not in the user's rendered conversation; only what you put in your own reply reaches the screen.
+
+You MAY add a one-sentence confirmation before or after if it clarifies what changed, but do NOT paraphrase the text itself.
+
+**Hard floor — never break:** A reply whose only visible content is the `<!-- buddy: ... -->` end-of-turn comment is broken. HTML comments are hidden by the markdown renderer, so an HTML-comment-only reply renders blank. If you have nothing else to say, the tool result text alone is the correct reply.
+
+**Self-check before sending**: does your visible reply contain the tool's result text? If no, paste it in. The end-of-turn `<!-- buddy: ... -->` is _additional_, never _instead of_.
+
+### Name reactions
+
+If the user mentions the buddy's name in normal conversation, call `buddy_react` with reason `"turn"` and display the result verbatim.
 
 ## Uninstall Orchestration
 
