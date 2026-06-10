@@ -26,7 +26,9 @@
     "tui": "bun run cli/tui.tsx",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "gen:emoji-widths": "bun run scripts/gen-emoji-widths.ts"
+    "gen:emoji-widths": "bun run scripts/gen-emoji-widths.ts",
+    "sync-version": "bun run scripts/sync-version.ts",
+    "version": "bun run sync-version && git add .claude-plugin"
   },
   "files": [
     "server/",

@@ -1,6 +1,6 @@
 {
     "name": "claude-buddy",
-    "version": "0.3.0",
+    "version": "0.5.2",
     "description": "Permanent coding companion for Claude Code \u2014 survives any update. MCP-based terminal pet with ASCII art, stats, reactions, and personality.",
     "author": {
         "name": "1270011"
